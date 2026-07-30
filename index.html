@@ -730,23 +730,35 @@ function submitResults() {
     comments: freetext,
   };
 
+  // Generate completion code
+  const code = generateCompletionCode();
+  data.completion_code = code;
+
   // Store locally as backup
   const key = 'ember_study_' + participantId;
   try { localStorage.setItem(key, JSON.stringify(data)); } catch(e) {}
 
-  // Generate completion code
-  const code = generateCompletionCode();
-  document.getElementById('completionCode').textContent = code;
+  // Submit to backend
+  const BACKEND_URL = 'https://neurodetermined.com/ember-study/submit.php';
+  fetch(BACKEND_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  }).catch(() => {
+    // Silent fail — localStorage backup exists, and the download
+    // below provides a second fallback
+  });
 
-  // Download results as JSON
+  // Also download as local backup (participant keeps a copy)
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
+  const blobUrl = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url;
+  a.href = blobUrl;
   a.download = 'study_response_' + participantId + '.json';
   a.click();
-  URL.revokeObjectURL(url);
+  URL.revokeObjectURL(blobUrl);
 
+  document.getElementById('completionCode').textContent = code;
   showSection('done');
 }
 
